@@ -48,3 +48,36 @@ class TestAccount:
         # testing valid promo code used by person born before 1960
         account = Account("Sam", "Mean", "55032323234", "PROM_ABC")
         assert account.balance == 0
+
+class TestTransfers:
+    def test_transfer_valid(self):
+        # testing valid outgoing transfer
+        account1 = Account("Julie", "Jensen", "93032323223", "PROM_ABC")
+        account2 = Account("Wilson", "Wood", "23114423950")
+
+        account1.outgoing_transfer(account2, 35)
+
+        assert account1.balance == 15
+        assert account2.balance == 35
+    
+    def test_transfer_not_enough_money(self):
+        # testing transfering more money than person obtain
+
+        account1 = Account("Julie", "Jensen", "93032323223", "PROM_ABC")
+        account2 = Account("Wilson", "Wood", "23114423950")
+
+        account1.outgoing_transfer(account2, 100)
+
+        assert account1.balance == 50
+        assert account2.balance == 0
+
+    def test_transfer_money_below_zero(self):
+        # testing transfers with negative number of money
+
+        account1 = Account("Julie", "Jensen", "93032323223", "PROM_ABC")
+        account2 = Account("Wilson", "Wood", "23114423950")
+
+        account1.outgoing_transfer(account2, -50)
+
+        assert account1.balance == 50
+        assert account2.balance == 0

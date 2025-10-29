@@ -27,3 +27,16 @@ class Account:
             return True
         else:
             return False
+        
+    def outgoing_transfer(self, receiver, amount):
+        if amount > self.balance or amount <= 0:
+            return False
+        
+        self.balance -= amount
+        receiver.incoming_transfer(amount)
+        
+        return True
+    
+    def incoming_transfer(self, amount):
+        self.balance += amount
+        return True

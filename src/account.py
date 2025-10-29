@@ -1,8 +1,26 @@
-class Account:
+class BaseAccount:
+    def __init__(self):
+        self.balance = 0
+
+    def outgoing_transfer(self, receiver, amount):
+        if amount > self.balance or amount <= 0:
+            return False
+        
+        self.balance -= amount
+        receiver.incoming_transfer(amount)
+        
+        return True
+
+    def incoming_transfer(self, amount):
+        self.balance += amount
+        return True
+
+class PersonalAccount(BaseAccount):
     def __init__(self, first_name, last_name, pesel, promo_code=None):
+        super().__init__()
+
         self.first_name = first_name
         self.last_name = last_name
-        self.balance = 0
         if len(pesel) != 11:
             pesel = "invalid"
         self.pesel = pesel
@@ -28,15 +46,11 @@ class Account:
         else:
             return False
         
-    def outgoing_transfer(self, receiver, amount):
-        if amount > self.balance or amount <= 0:
-            return False
-        
-        self.balance -= amount
-        receiver.incoming_transfer(amount)
-        
-        return True
-    
-    def incoming_transfer(self, amount):
-        self.balance += amount
-        return True
+class CompanyAccount(BaseAccount):
+    def __init__(self, company_name, nip):
+        super().__init__()
+
+        self.company_name = company_name
+        if len(nip) != 10:
+            nip = "invalid"
+        self.nip = nip

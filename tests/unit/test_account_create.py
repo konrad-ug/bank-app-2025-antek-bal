@@ -92,3 +92,45 @@ class TestTransfers:
 
         assert account1.balance == 50
         assert account2.balance == 0
+
+    def test_express_transfer_valid_personal(self):
+        # testing valid express transfer for personal account
+        account1 = PersonalAccount("William", "Wilson", "23233598375", "PROM_ABC")
+        account2 = PersonalAccount("Ben", "Lean", "21234593021")
+
+        account1.express_transfer(account2, 40)
+
+        assert account1.balance == 9
+        assert  account2.balance == 40
+
+    def test_express_transfer_valid_company(self):
+        # testing valid express transfer for company account
+        account1 = CompanyAccount("Wizzair", "1232567891")
+        account2 = CompanyAccount("Ryanair", "9876543211")
+        account1.balance = 50
+
+        account1.express_transfer(account2, 30)
+
+        assert account1.balance == 15
+        assert account2.balance == 30
+    
+    def test_express_transfer_not_enough_money(self):
+        # testing express transfer when trying to send more money than account has
+        account1 = PersonalAccount("Jimmy", "Bean", "98232164501")
+        account2 = PersonalAccount("Molly", "Dean", "21345687612")
+
+        account1.express_transfer(account2, 10)
+        
+        assert account1.balance == 0
+        assert account2.balance == 0
+    
+    def test_express_transfer_money_below_zero(self):
+        # testing express transfer with negative number of money
+        account1 = PersonalAccount("Marry", "Paul", "12312312393")
+        account2 = PersonalAccount("Mike", "Mick", "12345678911")
+
+        account1.express_transfer(account2, -50)
+
+        assert account1.balance == 0
+        assert account2.balance == 0
+        

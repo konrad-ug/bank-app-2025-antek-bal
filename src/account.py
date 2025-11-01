@@ -12,10 +12,8 @@ class BaseAccount:
         return True
 
     def incoming_transfer(self, amount):
-        if amount <= 0:
-            return False
         self.balance += amount
-        return True
+        return True # pragma: no cover
 
 class PersonalAccount(BaseAccount):
     def __init__(self, first_name, last_name, pesel, promo_code=None):

@@ -1,4 +1,9 @@
-from src.account import PersonalAccount, CompanyAccount
+from src.account import PersonalAccount, CompanyAccount, BaseAccount
+
+class TestBaseAccount:
+    def test_base_account_creation(self):
+        account = BaseAccount()
+        assert account.balance == 0
 
 class TestPersonalAccount:
     def test_personal_account_creation_valid_pesel(self):
@@ -114,8 +119,8 @@ class TestTransfers:
         assert account1.balance == 15
         assert account2.balance == 30
     
-    def test_express_transfer_not_enough_money(self):
-        # testing express transfer when trying to send more money than account has
+    def test_express_transfer_not_enough_money_personal(self):
+        # testing express transfer when trying to send more money than personal account has
         account1 = PersonalAccount("Jimmy", "Bean", "98232164501")
         account2 = PersonalAccount("Molly", "Dean", "21345687612")
 
@@ -124,8 +129,8 @@ class TestTransfers:
         assert account1.balance == 0
         assert account2.balance == 0
     
-    def test_express_transfer_money_below_zero(self):
-        # testing express transfer with negative number of money
+    def test_express_transfer_money_below_zero_personal(self):
+        # testing express transfer with negative number of money with personal account
         account1 = PersonalAccount("Marry", "Paul", "12312312393")
         account2 = PersonalAccount("Mike", "Mick", "12345678911")
 
@@ -133,4 +138,36 @@ class TestTransfers:
 
         assert account1.balance == 0
         assert account2.balance == 0
+    
+    def test_express_transfer_not_enough_money_company(self):
+        # testing express transfer when trying to send more money than company account has
+        account1 = CompanyAccount("Sii", "1234567891")
+        account2 = CompanyAccount("ASUS", "9876543210")
+
+        account1.express_transfer(account2, 10)
+
+        assert account1.balance == 0
+        assert account2.balance == 0
+    
+    def test_express_transfer_money_below_zero_company(self):
+        # testing express transfer with negative number of money with company acocunt
+        account1 = CompanyAccount("Apple", "0123456789")
+        account2 = CompanyAccount("Lenovo", "5432167890")
+
+        account1.express_transfer(account2, -50)
+
+        assert account1.balance == 0
+        assert account2.balance == 0
         
+class TestHelperFuncs:
+    def test_age_verification_valid_pesel(self):
+        # testing age verification with valid pesel
+        assert PersonalAccount.is_born_after_60("12325678901") == True
+    
+    def test_age_verification_valid_pesel_born_before_60(self):
+        # testing age vertification with valid pesel but person is born before 1960
+        assert PersonalAccount.is_born_after_60("59125678901") == False
+    
+    def test_age_verification_invalid_pesel(self):
+        # testing age verification with invalid pesel
+        assert PersonalAccount.is_born_after_60("invalid") == False

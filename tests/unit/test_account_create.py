@@ -4,6 +4,7 @@ class TestBaseAccount:
     def test_base_account_creation(self):
         account = BaseAccount()
         assert account.balance == 0
+        assert account.history == []
 
 class TestPersonalAccount:
     def test_personal_account_creation_valid_pesel(self):
@@ -13,6 +14,7 @@ class TestPersonalAccount:
         assert account.last_name == "Doe"
         assert account.balance == 0
         assert account.pesel == "06320302456"
+        assert account.history == []
         
     def test_personal_account_creation_invalid_pesel_short(self):
         # testing account with invalid pesel (too short)
@@ -61,6 +63,7 @@ class TestCompanyAccount:
         assert account.company_name == "Intel"
         assert account.balance == 0
         assert account.nip == "1234567891"
+        assert account.history == []
 
     def test_company_account_creation_invalid_nip(self):
         # testing creating company account with invalid nip
@@ -77,6 +80,9 @@ class TestTransfers:
 
         assert account1.balance == 15
         assert account2.balance == 35
+
+        assert account1.history == [-35]
+        assert account2.history == [35]
     
     def test_transfer_not_enough_money(self):
         # testing transfering more money than person obtain
@@ -88,6 +94,9 @@ class TestTransfers:
         assert account1.balance == 50
         assert account2.balance == 0
 
+        assert account1.history == []
+        assert account2.history == []
+
     def test_transfer_money_below_zero(self):
         # testing transfers with negative number of money
         account1 = PersonalAccount("Julie", "Jensen", "93032323223", "PROM_ABC")
@@ -97,6 +106,9 @@ class TestTransfers:
 
         assert account1.balance == 50
         assert account2.balance == 0
+
+        assert account1.history == []
+        assert account2.history == []
 
     def test_express_transfer_valid_personal(self):
         # testing valid express transfer for personal account
@@ -108,6 +120,9 @@ class TestTransfers:
         assert account1.balance == 9
         assert  account2.balance == 40
 
+        assert account1.history == [-40, -1]
+        assert account2.history == [40]
+
     def test_express_transfer_valid_company(self):
         # testing valid express transfer for company account
         account1 = CompanyAccount("Wizzair", "1232567891")
@@ -118,6 +133,9 @@ class TestTransfers:
 
         assert account1.balance == 15
         assert account2.balance == 30
+
+        assert account1.history == [-30, -5]
+        assert account2.history == [30]
     
     def test_express_transfer_not_enough_money_personal(self):
         # testing express transfer when trying to send more money than personal account has
@@ -128,6 +146,9 @@ class TestTransfers:
         
         assert account1.balance == 0
         assert account2.balance == 0
+
+        assert account1.history == []
+        assert account2.history == []
     
     def test_express_transfer_money_below_zero_personal(self):
         # testing express transfer with negative number of money with personal account
@@ -138,6 +159,9 @@ class TestTransfers:
 
         assert account1.balance == 0
         assert account2.balance == 0
+
+        assert account1.history == []
+        assert account2.history == []
     
     def test_express_transfer_not_enough_money_company(self):
         # testing express transfer when trying to send more money than company account has
@@ -148,6 +172,9 @@ class TestTransfers:
 
         assert account1.balance == 0
         assert account2.balance == 0
+
+        assert account1.history == []
+        assert account2.history == []
     
     def test_express_transfer_money_below_zero_company(self):
         # testing express transfer with negative number of money with company acocunt
@@ -158,6 +185,9 @@ class TestTransfers:
 
         assert account1.balance == 0
         assert account2.balance == 0
+
+        assert account1.history == []
+        assert account2.history == []
         
 class TestHelperFuncs:
     def test_age_verification_valid_pesel(self):

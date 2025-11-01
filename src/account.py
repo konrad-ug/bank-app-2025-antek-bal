@@ -1,6 +1,7 @@
 class BaseAccount:
     def __init__(self):
         self.balance = 0
+        self.history = []
 
     def outgoing_transfer(self, receiver, amount):
         if amount > self.balance or amount <= 0:
@@ -8,11 +9,14 @@ class BaseAccount:
         
         self.balance -= amount
         receiver.incoming_transfer(amount)
+        self.history.append(-amount)
         
         return True
 
     def incoming_transfer(self, amount):
         self.balance += amount
+        self.history.append(amount)
+        
         return True # pragma: no cover
 
 class PersonalAccount(BaseAccount):
@@ -44,6 +48,9 @@ class PersonalAccount(BaseAccount):
         
         self.balance -= amount + 1
         receiver.incoming_transfer(amount)
+
+        self.history.append(-amount)
+        self.history.append(-1)
         
         return True
         
@@ -62,5 +69,8 @@ class CompanyAccount(BaseAccount):
         
         self.balance -= amount + 5
         receiver.incoming_transfer(amount)
+
+        self.history.append(-amount)
+        self.history.append(-5)
         
         return True

@@ -189,6 +189,76 @@ class TestTransfers:
         assert account1.history == []
         assert account2.history == []
         
+class TestLoans:
+    def test_loan_valid_last_three_transactions(self):
+        # testing valid submittion for loan (3 last transactions are incoming)
+        account = PersonalAccount("John", "Smith", "12345678911")
+
+        for _ in range(3):
+            account.incoming_transfer(500)
+
+        account.submit_for_loan(4000)
+
+        assert account.balance == 5500
+    
+    def test_loan_valid_last_five_transactions(self):
+        # testing valid submittion for loan (sum of last 5 transactions is higher than loan)
+        account1 = PersonalAccount("Jack", "Wilson", "98765432101")
+        account2 = PersonalAccount("Mick", "Mean", "12345987601")
+
+        for _ in range(2):
+            account1.incoming_transfer(2000)
+
+        for _ in range(3):
+            account1.outgoing_transfer(account2, 300)
+        
+        account1.submit_for_loan(3000)
+
+        assert account1.balance == 6100
+        assert account1.history == [2000, 2000, -300, -300, -300, 3000]
+    
+    def test_loan_valid_last_five_transactions_with_express_transfer(self):
+        # testing valid submittion for loan (sum of last 5 transactions is higher than loan)
+        account1 = PersonalAccount("Jack", "Wilson", "98765432101")
+        account2 = PersonalAccount("Mick", "Mean", "12345987601")
+
+        account1.incoming_transfer(20000)
+
+        for _ in range(2):
+            account1.express_transfer(account2, 300)
+        
+        account1.submit_for_loan(19000)
+
+        assert account1.balance == 38398
+        assert account1.history == [20000, -300, -1, -300, -1, 19000]
+    
+    def test_loan_invalid_less_than_five_transactions(self):
+        # testing invalid submittion for loan (less than 5 transactions in history)
+        account = PersonalAccount("Paul", "Williams", "12398745601")
+
+        account.incoming_transfer(50000)
+
+        account.submit_for_loan(10000)
+
+        assert account.balance == 50000
+        assert account.history == [50000]
+    
+    def test_loan_invalid_loan_higher_than_transactions(self):
+        # testing invalid submittion for loan (sum of last transactions is less than loan)
+        account1 = PersonalAccount("Adam", "Bone", "09876543122")
+        account2 = PersonalAccount("Greg", "Johnson", "56478392012")
+
+        for _ in range(2):
+            account1.incoming_transfer(2000)
+
+        for _ in range(3):
+            account1.outgoing_transfer(account2, 300)
+        
+        account1.submit_for_loan(100000)
+
+        assert account1.balance == 3100
+        assert account1.history == [2000, 2000, -300, -300, -300]
+
 class TestHelperFuncs:
     def test_age_verification_valid_pesel(self):
         # testing age verification with valid pesel

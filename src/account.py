@@ -55,11 +55,8 @@ class PersonalAccount(BaseAccount):
         return True
     
     def submit_for_loan(self, amount):
-        last_three = self.history[-3:]
-        last_five = self.history[-5:]
-
-        last_three_incoming = len(last_three) >= 3 and all(x > 0 for x in last_three)
-        last_five_sum = len(self.history) >= 5 and sum(last_five) > amount
+        last_three_incoming = len(self.history[-3:]) >= 3 and all(x > 0 for x in self.history[-3:])
+        last_five_sum = len(self.history) >= 5 and sum(self.history[-5:]) > amount
 
         if last_three_incoming or last_five_sum:
             self.balance += amount

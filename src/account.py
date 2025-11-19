@@ -53,6 +53,20 @@ class PersonalAccount(BaseAccount):
         self.history.append(-1)
         
         return True
+    
+    def submit_for_loan(self, amount):
+        last_three = self.history[-3:]
+        last_five = self.history[-5:]
+
+        last_three_incoming = len(last_three) >= 3 and all(x > 0 for x in last_three)
+        last_five_sum = len(self.history) >= 5 and sum(last_five) > amount
+
+        if last_three_incoming or last_five_sum:
+            self.balance += amount
+            self.history.append(amount)
+            return True
+        
+        return False
         
 class CompanyAccount(BaseAccount):
     def __init__(self, company_name, nip):

@@ -1,5 +1,5 @@
 import pytest
-from src.account import PersonalAccount, CompanyAccount, BaseAccount
+from src.account import PersonalAccount, CompanyAccount, BaseAccount, accounts_registry
 
 @pytest.fixture
 def base_account():
@@ -32,3 +32,13 @@ def company_account_first():
 @pytest.fixture
 def company_account_second():
     return CompanyAccount("Ryanair", "9876543211")
+
+@pytest.fixture
+def zus_account():
+    return CompanyAccount("ZUS", "1293922354")
+
+@pytest.fixture
+def registry():
+    accounts_registry.personal_accounts.clear()
+    accounts_registry.company_accounts.clear()
+    return accounts_registry

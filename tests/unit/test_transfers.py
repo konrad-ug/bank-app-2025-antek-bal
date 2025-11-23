@@ -6,8 +6,8 @@ class TestTransfers:
         assert personal_account_valid.balance == 15
         assert personal_account_simple.balance == 35
 
-        assert personal_account_valid.history == [-35]
-        assert personal_account_simple.history == [35]
+        assert personal_account_valid.history == [{"id": 1, "amount": -35, "type": "receiver", "identity": personal_account_simple}]
+        assert personal_account_simple.history == [{"id": 1, "amount": 35, "type": "sender", "identity": personal_account_valid}]
     
     def test_transfer_not_enough_money(self, personal_account_valid, personal_account_simple):
         # testing transfering more money than person obtain
@@ -37,8 +37,9 @@ class TestTransfers:
         assert personal_account_valid.balance == 9
         assert personal_account_simple.balance == 40
 
-        assert personal_account_valid.history == [-40, -1]
-        assert personal_account_simple.history == [40]
+        assert personal_account_valid.history == [{"id": 1, "amount": -40, "type": "receiver", "identity": personal_account_simple}, 
+                                                  {"id": 2, "amount": -1, "type": "charge", "identity": "express transfer"}]
+        assert personal_account_simple.history == [{"id": 1, "amount": 40, "type": "sender", "identity": personal_account_valid}]
 
     def test_express_transfer_valid_company(self, company_account_first, company_account_second):
         # testing valid express transfer for company account
@@ -49,8 +50,9 @@ class TestTransfers:
         assert company_account_first.balance == 15
         assert company_account_second.balance == 30
 
-        assert company_account_first.history == [-30, -5]
-        assert company_account_second.history == [30]
+        assert company_account_first.history == [{"id": 1, "amount": -30, "type": "receiver", "identity": company_account_second}, 
+                                                 {"id": 2, "amount": -5, "type": "charge", "identity": "express transfer"}]
+        assert company_account_second.history == [{"id": 1, "amount": 30, "type": "sender", "identity": company_account_first}]
     
     def test_express_transfer_not_enough_money_personal(self, personal_account_valid, personal_account_simple):
         # testing express transfer when trying to send more money than personal account has

@@ -1,5 +1,5 @@
 import pytest
-from src.account import CompanyAccount
+from src.company_account import CompanyAccount
 
 @pytest.mark.parametrize(
     "company_name, nip, expected_nip",

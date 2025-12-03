@@ -1,5 +1,10 @@
 import pytest
-from src.account import PersonalAccount, CompanyAccount, BaseAccount, accounts_registry
+from src.base_account import BaseAccount
+from src.personal_account import PersonalAccount
+from src.company_account import CompanyAccount
+from src.account_registry import AccountRegistry
+from app.api import account_registry
+
 
 @pytest.fixture
 def base_account():
@@ -39,6 +44,6 @@ def zus_account():
 
 @pytest.fixture
 def registry():
-    accounts_registry.personal_accounts.clear()
-    accounts_registry.company_accounts.clear()
-    return accounts_registry
+    account_registry.personal_accounts = []
+    account_registry.company_accounts = []
+    return account_registry

@@ -1,5 +1,5 @@
 import pytest
-from src.account import PersonalAccount
+from src.personal_account import PersonalAccount
 
 @pytest.mark.parametrize(
     "first_name, last_name, pesel, promo_code, expected_balance",

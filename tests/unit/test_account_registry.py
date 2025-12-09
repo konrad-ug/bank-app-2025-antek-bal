@@ -39,7 +39,8 @@ class TestAccountRegistry:
         assert company_account_first in all_accounts and company_account_second in all_accounts
         assert len(all_accounts) == 2
 
-    def test_quantity_personal_and_company_accounts(self, registry, personal_account_simple, personal_account_valid, company_account_first):
+    def test_quantity_personal_and_company_accounts(self, registry, personal_account_simple, personal_account_valid,
+                                                    company_account_first):
         registry.add_personal_account(personal_account_simple)
         registry.add_personal_account(personal_account_valid)
         registry.add_company_account(company_account_first)

@@ -1,6 +1,7 @@
 import pytest
 from src.personal_account import PersonalAccount
 
+
 @pytest.mark.parametrize(
     "first_name, last_name, pesel, promo_code, expected_balance",
     [
@@ -16,21 +17,23 @@ def test_personal_account_creation(first_name, last_name, pesel, promo_code, exp
     assert account.pesel == pesel
     assert account.balance == expected_balance
 
+
 @pytest.mark.parametrize(
-        "invalid_pesel", 
-        [
-            "4312", "123234324112421"
-        ]
+    "invalid_pesel",
+    [
+        "4312", "123234324112421"
+    ]
 )
 def test_personal_account_invalid_pesel(invalid_pesel):
     account = PersonalAccount("Jane", "Smith", invalid_pesel)
     assert account.pesel == "invalid"
 
+
 @pytest.mark.parametrize(
-        "invalid_promo", 
-        [
-            "PROMOCODE", "PROM_ABCD", "prom_ABC", None
-        ]
+    "invalid_promo",
+    [
+        "PROMOCODE", "PROM_ABCD", "prom_ABC", None
+    ]
 )
 def test_personal_account_invalid_promo(invalid_promo):
     account = PersonalAccount("Mike", "Harris", "25521231323", invalid_promo)

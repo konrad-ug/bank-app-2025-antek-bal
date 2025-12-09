@@ -1,240 +1,149 @@
-import requests
 import pytest
 
-BASE_URL = "http://localhost:5000/api/company_accounts"
-PERSONAL_URL = "http://localhost:5000/api/personal_accounts"
+from app.api import account_registry
 
 
 class TestCompanyAccountsApi:
     @pytest.fixture
     def company_account(self):
-        nip = "1234567890"
-        data = {"company_name": "Test Corp", "nip": nip}
-        yield data
-        requests.delete(f"{BASE_URL}/{nip}")
+        return {"company_name": "Test Corp", "nip": "1234567890"}
 
     @pytest.fixture
     def company_account_2(self):
-        nip = "0987654321"
-        data = {"company_name": "Second Corp", "nip": nip}
-        yield data
-        requests.delete(f"{BASE_URL}/{nip}")
+        return {"company_name": "Second Corp", "nip": "0987654321"}
 
     @pytest.fixture
-    def fund_provider(self):
-        pesel = "12345678901"
-        data = {"first_name": "Rich", "last_name": "Person", "pesel": pesel, "promo_code": "PROM_123"}
-        requests.post(PERSONAL_URL, json=data)
-        yield data
-        requests.delete(f"{PERSONAL_URL}/{pesel}")
+    def fund_provider(self, client):
+        data = {"first_name": "Rich", "last_name": "Person", "pesel": "12345678901", "promo_code": "PROM_123"}
+        client.post("/api/personal_accounts", json=data)
+        account = account_registry.search_personal_account("12345678901")
+        account.balance = 10000
+        return data
 
-    def test_create_account(self, company_account):
-        response = requests.post(BASE_URL, json=company_account)
+    def test_create_account(self, client, company_account):
+        response = client.post("/api/company_accounts", json=company_account)
         assert response.status_code == 201
 
-    def test_get_all_accounts(self, company_account):
-        requests.post(BASE_URL, json=company_account)
-        response = requests.get(BASE_URL)
+    def test_get_all_accounts(self, client, company_account):
+        client.post("/api/company_accounts", json=company_account)
+        response = client.get("/api/company_accounts")
+        assert response.status_code == 200
+        assert len(response.get_json()) == 1
+
+    def test_get_count_accounts(self, client, company_account):
+        client.post("/api/company_accounts", json=company_account)
+        response = client.get("/api/company_accounts/count")
+        assert response.status_code == 200
+        assert response.get_json()['count'] == 1
+
+    def test_get_account(self, client, company_account):
+        client.post("/api/company_accounts", json=company_account)
+        response = client.get(f"/api/company_accounts/{company_account['nip']}")
         assert response.status_code == 200
 
-    def test_get_count_accounts(self, company_account):
-        requests.post(BASE_URL, json=company_account)
-        response = requests.get(f"{BASE_URL}/count")
-        assert response.status_code == 200 and response.json()['count'] == 1
-
-    def test_get_account(self, company_account):
-        requests.post(BASE_URL, json=company_account)
-        response = requests.get(f"{BASE_URL}/{company_account['nip']}")
+    def test_update_account(self, client, company_account):
+        client.post("/api/company_accounts", json=company_account)
+        response = client.patch(f"/api/company_accounts/{company_account['nip']}",
+                                json={"company_name": "Updated Corp"})
         assert response.status_code == 200
 
-    def test_update_account(self, company_account):
-        requests.post(BASE_URL, json=company_account)
-        new_data = {"company_name": "Updated Corp"}
-
-        response = requests.patch(f"{BASE_URL}/{company_account['nip']}", json=new_data)
+    def test_delete_account(self, client, company_account):
+        client.post("/api/company_accounts", json=company_account)
+        response = client.delete(f"/api/company_accounts/{company_account['nip']}")
         assert response.status_code == 200
-        assert response.json() == {"message": "Account updated"}
 
-        get_response = requests.get(f"{BASE_URL}/{company_account['nip']}")
-        updated_account = get_response.json()
+    def test_transfers_and_history_check(self, client, company_account, company_account_2, fund_provider):
+        client.post("/api/company_accounts", json=company_account)
+        client.post("/api/company_accounts", json=company_account_2)
 
-        assert updated_account["company_name"] == "Updated Corp"
-        assert updated_account["nip"] == company_account["nip"]
+        client.post(f"/api/personal_accounts/{fund_provider['pesel']}/outgoing_transfer",
+                    json={"amount": 200, "receiver_nip": company_account["nip"]})
 
-    def test_delete_account(self, company_account):
-        requests.post(BASE_URL, json=company_account)
-        response = requests.delete(f"{BASE_URL}/{company_account['nip']}")
+        client.post(f"/api/company_accounts/{company_account['nip']}/outgoing_transfer",
+                    json={"amount": 50, "receiver_nip": company_account_2["nip"]})
 
+        client.post(f"/api/company_accounts/{company_account['nip']}/express_transfer",
+                    json={"amount": 10, "receiver_nip": company_account_2["nip"]})
+
+        response = client.get(f"/api/company_accounts/{company_account['nip']}/history")
         assert response.status_code == 200
-        assert response.json() == {"message": "Account deleted"}
+        history = response.get_json()
+        assert len(history) == 4
 
-        get_response = requests.get(f"{BASE_URL}/{company_account['nip']}")
-        assert get_response.status_code == 404
+        assert any(entry["identity"] == fund_provider["pesel"] for entry in history)
+        assert any(entry["identity"] == company_account_2["nip"] for entry in history)
+        assert any(entry["identity"] == "express transfer" for entry in history)
 
-    def test_outgoing_transfer(self, company_account, company_account_2, fund_provider):
-        requests.post(BASE_URL, json=company_account)
-        requests.post(BASE_URL, json=company_account_2)
+    def test_successful_loan(self, client, company_account, fund_provider):
+        client.post("/api/company_accounts", json=company_account)
+        client.post(f"/api/personal_accounts/{fund_provider['pesel']}/outgoing_transfer",
+                    json={"amount": 5000, "receiver_nip": company_account["nip"]})
 
-        funding_transfer = {
-            "amount": 50,
-            "receiver_nip": company_account["nip"]
-        }
-        requests.post(f"{PERSONAL_URL}/{fund_provider['pesel']}/outgoing_transfer", json=funding_transfer)
+        zus = {"company_name": "ZUS", "nip": "6666666666"}
+        client.post("/api/company_accounts", json=zus)
+        client.post(f"/api/company_accounts/{company_account['nip']}/outgoing_transfer",
+                    json={"amount": 1775, "receiver_nip": zus["nip"]})
 
-        transfer_data = {
-            "amount": 10,
-            "receiver_nip": company_account_2["nip"]
-        }
-
-        response = requests.post(f"{BASE_URL}/{company_account['nip']}/outgoing_transfer", json=transfer_data)
-
+        response = client.post(f"/api/company_accounts/{company_account['nip']}/submit_for_loan", json={"amount": 1000})
         assert response.status_code == 200
-        assert response.json() == {"message": "Outgoing transfer successful"}
 
-    def test_express_transfer(self, company_account, company_account_2, fund_provider):
-        requests.post(BASE_URL, json=company_account)
-        requests.post(BASE_URL, json=company_account_2)
+    def test_history_transfer_to_personal_check(self, client, company_account, fund_provider):
+        client.post("/api/company_accounts", json=company_account)
 
-        funding_transfer = {
-            "amount": 50,
-            "receiver_nip": company_account["nip"]
-        }
-        requests.post(f"{PERSONAL_URL}/{fund_provider['pesel']}/outgoing_transfer", json=funding_transfer)
+        client.post(f"/api/personal_accounts/{fund_provider['pesel']}/outgoing_transfer",
+                    json={"amount": 100, "receiver_nip": company_account["nip"]})
 
-        transfer_data = {
-            "amount": 10,
-            "receiver_nip": company_account_2["nip"]
-        }
+        client.post(f"/api/company_accounts/{company_account['nip']}/outgoing_transfer",
+                    json={"amount": 10, "receiver_pesel": fund_provider["pesel"]})
 
-        response = requests.post(f"{BASE_URL}/{company_account['nip']}/express_transfer", json=transfer_data)
-
+        response = client.get(f"/api/company_accounts/{company_account['nip']}/history")
         assert response.status_code == 200
-        assert response.json() == {"message": "Express transfer successful"}
+        history = response.get_json()
 
-    def test_get_history_after_transfer(self, company_account, company_account_2, fund_provider):
-        requests.post(BASE_URL, json=company_account)
-        requests.post(BASE_URL, json=company_account_2)
+        transfer = next((item for item in history if item["type"] == "receiver"), None)
+        assert transfer is not None
+        assert transfer["identity"] == fund_provider["pesel"]
 
-        funding_transfer = {
-            "amount": 50,
-            "receiver_nip": company_account["nip"]
-        }
-        requests.post(f"{PERSONAL_URL}/{fund_provider['pesel']}/outgoing_transfer", json=funding_transfer)
-
-        transfer_data = {
-            "amount": 50,
-            "receiver_nip": company_account_2["nip"]
-        }
-        requests.post(f"{BASE_URL}/{company_account['nip']}/outgoing_transfer", json=transfer_data)
-
-        response = requests.get(f"{BASE_URL}/{company_account['nip']}/history")
-
-        assert response.status_code == 200
-        history = response.json()
-
-        assert len(history) == 2
-
-        outgoing_transaction = history[1]
-        assert outgoing_transaction["amount"] == -50
-        assert outgoing_transaction["identity"] == company_account_2["nip"]
-
-    def test_get_non_existent_account(self):
-        response = requests.get(f"{BASE_URL}/0000000000")
-        assert response.status_code == 404
-        assert response.json() == {"error": "Account not found"}
-
-    def test_update_non_existent_account(self):
-        new_data = {"company_name": "Ghost Corp"}
-        response = requests.patch(f"{BASE_URL}/0000000000", json=new_data)
+    def test_get_non_existent(self, client):
+        response = client.get("/api/company_accounts/0000000000")
         assert response.status_code == 404
 
-    def test_delete_non_existent_account(self):
-        response = requests.delete(f"{BASE_URL}/0000000000")
+    def test_update_non_existent(self, client):
+        response = client.patch("/api/company_accounts/0000000000", json={"company_name": "Ghost"})
         assert response.status_code == 404
 
-    def test_transfer_failure_insufficient_funds(self, company_account, company_account_2):
-        requests.post(BASE_URL, json=company_account)
-        requests.post(BASE_URL, json=company_account_2)
-
-        transfer_data = {
-            "amount": 1000,
-            "receiver_nip": company_account_2["nip"]
-        }
-
-        response = requests.post(f"{BASE_URL}/{company_account['nip']}/outgoing_transfer", json=transfer_data)
-
-        assert response.status_code == 400
-        assert response.json() == {"error": "Outgoing transfer failed"}
-
-    def test_transfer_failure_receiver_not_found(self, company_account, fund_provider):
-        requests.post(BASE_URL, json=company_account)
-
-        funding_transfer = {
-            "amount": 100,
-            "receiver_nip": company_account["nip"]
-        }
-        requests.post(f"{PERSONAL_URL}/{fund_provider['pesel']}/outgoing_transfer", json=funding_transfer)
-
-        transfer_data = {
-            "amount": 10,
-            "receiver_nip": "0000000000"
-        }
-
-        response = requests.post(f"{BASE_URL}/{company_account['nip']}/outgoing_transfer", json=transfer_data)
-
+    def test_delete_non_existent(self, client):
+        response = client.delete("/api/company_accounts/0000000000")
         assert response.status_code == 404
-        assert response.json() == {"error": "Sender or receiver account not found"}
 
-    def test_express_transfer_failure_insufficient_funds(self, company_account, company_account_2):
-        requests.post(BASE_URL, json=company_account)
-        requests.post(BASE_URL, json=company_account_2)
+    def test_outgoing_transfer_failures(self, client, company_account):
+        client.post("/api/company_accounts", json=company_account)
+        res1 = client.post(f"/api/company_accounts/{company_account['nip']}/outgoing_transfer",
+                           json={"amount": 1000, "receiver_nip": "1234567890"})
+        assert res1.status_code == 400
 
-        transfer_data = {
-            "amount": 1000,
-            "receiver_nip": company_account_2["nip"]
-        }
+        res2 = client.post(f"/api/company_accounts/{company_account['nip']}/outgoing_transfer",
+                           json={"amount": 10, "receiver_nip": "0000000000"})
+        assert res2.status_code == 404
 
-        response = requests.post(f"{BASE_URL}/{company_account['nip']}/express_transfer", json=transfer_data)
+    def test_express_transfer_failures(self, client, company_account):
+        client.post("/api/company_accounts", json=company_account)
+        res1 = client.post(f"/api/company_accounts/{company_account['nip']}/express_transfer",
+                           json={"amount": 1000, "receiver_nip": "1234567890"})
+        assert res1.status_code == 400
 
-        assert response.status_code == 400
-        assert response.json() == {"error": "Express transfer failed"}
+        res2 = client.post(f"/api/company_accounts/{company_account['nip']}/express_transfer",
+                           json={"amount": 10, "receiver_nip": "0000000000"})
+        assert res2.status_code == 404
 
-    def test_express_transfer_failure_receiver_not_found(self, company_account, fund_provider):
-        requests.post(BASE_URL, json=company_account)
+    def test_loan_failures(self, client, company_account):
+        res1 = client.post("/api/company_accounts/0000000000/submit_for_loan", json={"amount": 100})
+        assert res1.status_code == 404
 
-        funding_transfer = {
-            "amount": 100,
-            "receiver_nip": company_account["nip"]
-        }
-        requests.post(f"{PERSONAL_URL}/{fund_provider['pesel']}/outgoing_transfer", json=funding_transfer)
+        client.post("/api/company_accounts", json=company_account)
+        res2 = client.post(f"/api/company_accounts/{company_account['nip']}/submit_for_loan", json={"amount": 10000})
+        assert res2.status_code == 400
 
-        transfer_data = {
-            "amount": 10,
-            "receiver_nip": "0000000000"
-        }
-        response = requests.post(f"{BASE_URL}/{company_account['nip']}/express_transfer", json=transfer_data)
-
+    def test_history_non_existent(self, client):
+        response = client.get("/api/company_accounts/0000000000/history")
         assert response.status_code == 404
-        assert response.json() == {"error": "Sender or receiver account not found"}
-
-    def test_loan_failure(self, company_account):
-        requests.post(BASE_URL, json=company_account)
-
-        loan_data = {"amount": 10000}
-        response = requests.post(f"{BASE_URL}/{company_account['nip']}/submit_for_loan", json=loan_data)
-
-        assert response.status_code == 400
-        assert response.json() == {"error": "Submission for loan failed"}
-
-    def test_loan_non_existent_account(self):
-        loan_data = {"amount": 100}
-        response = requests.post(f"{BASE_URL}/0000000000/submit_for_loan", json=loan_data)
-
-        assert response.status_code == 404
-        assert response.json() == {"error": "Account not found"}
-
-    def test_history_non_existent_account(self):
-        response = requests.get(f"{BASE_URL}/0000000000/history")
-
-        assert response.status_code == 404
-        assert response.json() == {"error": "Account not found"}

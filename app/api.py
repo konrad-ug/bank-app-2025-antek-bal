@@ -91,14 +91,14 @@ def personal_account_express_transfer(pesel):
 
 @app.route("/api/personal_accounts/<pesel>/submit_for_loan", methods=['POST'])
 def personal_account_submit_for_loan(pesel):
-    submiter = account_registry.search_personal_account(pesel)
+    submitter = account_registry.search_personal_account(pesel)
     data = request.get_json()
     amount = data.get("amount")
 
-    if not submiter:
+    if not submitter:
         return jsonify({"error": "Account not found"}), 404
 
-    success = submiter.submit_for_loan(amount)
+    success = submitter.submit_for_loan(amount)
     if success:
         return jsonify({"message": "Submission for loan successful"}), 200
     return jsonify({"error": "Submission for loan failed"}), 400

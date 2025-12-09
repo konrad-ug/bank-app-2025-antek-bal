@@ -1,5 +1,6 @@
 import pytest
-from src.account import PersonalAccount
+from src.personal_account import PersonalAccount
+
 
 @pytest.mark.parametrize(
     "pesel, expected_return",

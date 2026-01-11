@@ -10,7 +10,12 @@ account_registry = AccountRegistry()
 def create_personal_account():
     data = request.get_json()
     print(f"Create account request: {data}")
-    account = PersonalAccount(data.get("first_name"), data.get("last_name"), data.get("pesel"), data.get("promo_code"))
+
+    pesel = data.get("pesel")
+    if account_registry.search_personal_account(pesel):
+        return jsonify({"message": "Account with this PESEL already exists"}), 409
+
+    account = PersonalAccount(data.get("first_name"), data.get("last_name"), pesel, data.get("promo_code"))
     account_registry.add_personal_account(account)
     return jsonify({"message": "Account created"}), 201
 
@@ -151,10 +156,14 @@ def get_personal_history(pesel):
 def create_company_account():
     data = request.get_json()
     print(f"Create account request: {data}")
-    account = CompanyAccount(data.get("company_name"), data.get("nip"))
+
+    nip = data.get("nip")
+    if account_registry.search_company_account(nip):
+        return jsonify({"message": "Account with this NIP already exists"}), 409
+
+    account = CompanyAccount(data.get("company_name"), nip)
     account_registry.add_company_account(account)
     return jsonify({"message": "Account created"}), 201
-
 
 @app.route("/api/company_accounts", methods=['GET'])
 def get_all_company_accounts():

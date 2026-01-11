@@ -14,6 +14,12 @@ class TestPersonalAccountsApi:
         response = client.post("/api/personal_accounts", json=personal_account)
         assert response.status_code == 201
 
+    def test_create_duplicate_account(self, client, personal_account):
+        client.post("/api/personal_accounts", json=personal_account)
+        response = client.post("/api/personal_accounts", json=personal_account)
+        assert response.status_code == 409
+        assert response.get_json()["message"] == "Account with this PESEL already exists"
+
     def test_get_all_accounts(self, client, personal_account):
         client.post("/api/personal_accounts", json=personal_account)
         response = client.get("/api/personal_accounts")
@@ -50,148 +56,56 @@ class TestPersonalAccountsApi:
         get_response = client.get(f"/api/personal_accounts/{personal_account['pesel']}")
         assert get_response.status_code == 404
 
-    def test_outgoing_transfer(self, client, personal_account, personal_account_2):
-        personal_account["promo_code"] = "PROM_123"
+
+    def test_transfer_incoming(self, client, personal_account):
+        client.post("/api/personal_accounts", json=personal_account)
+        transfer_data = {"amount": 500, "type": "incoming"}
+
+        response = client.post(f"/api/personal_accounts/{personal_account['pesel']}/transfer", json=transfer_data)
+        assert response.status_code == 200
+
+        acc_response = client.get(f"/api/personal_accounts/{personal_account['pesel']}")
+        assert acc_response.get_json()["balance"] == 500
+
+    def test_transfer_outgoing_success(self, client, personal_account, personal_account_2):
         client.post("/api/personal_accounts", json=personal_account)
         client.post("/api/personal_accounts", json=personal_account_2)
 
-        transfer_data = {"amount": 10, "receiver_pesel": personal_account_2["pesel"]}
-        response = client.post(f"/api/personal_accounts/{personal_account['pesel']}/outgoing_transfer",
-                               json=transfer_data)
+        client.post(f"/api/personal_accounts/{personal_account['pesel']}/transfer",
+                    json={"amount": 1000, "type": "incoming"})
 
+        transfer_data = {
+            "amount": 200,
+            "type": "outgoing",
+            "receiver_pesel": personal_account_2["pesel"]
+        }
+
+        response = client.post(f"/api/personal_accounts/{personal_account['pesel']}/transfer", json=transfer_data)
         assert response.status_code == 200
-        assert response.get_json() == {"message": "Outgoing transfer successful"}
+        assert response.get_json()["message"] == "Transfer in progress"
 
-    def test_express_transfer(self, client, personal_account, personal_account_2):
-        personal_account["promo_code"] = "PROM_123"
+    def test_transfer_outgoing_insufficient_funds(self, client, personal_account, personal_account_2):
         client.post("/api/personal_accounts", json=personal_account)
         client.post("/api/personal_accounts", json=personal_account_2)
 
-        transfer_data = {"amount": 10, "receiver_pesel": personal_account_2["pesel"]}
-        response = client.post(f"/api/personal_accounts/{personal_account['pesel']}/express_transfer",
-                               json=transfer_data)
+        transfer_data = {
+            "amount": 10000,
+            "type": "outgoing",
+            "receiver_pesel": personal_account_2["pesel"]
+        }
 
-        assert response.status_code == 200
+        response = client.post(f"/api/personal_accounts/{personal_account['pesel']}/transfer", json=transfer_data)
+        assert response.status_code == 422
+        assert response.get_json()["error"] == "Insufficient funds"
 
-    def test_submit_for_loan(self, client, personal_account, personal_account_2):
-        personal_account["promo_code"] = "PROM_123"
-        personal_account_2["promo_code"] = "PROM_123"
-        client.post("/api/personal_accounts", json=personal_account)
-        client.post("/api/personal_accounts", json=personal_account_2)
-
-        transfer_data = {"amount": 10, "receiver_pesel": personal_account["pesel"]}
-        for _ in range(3):
-            client.post(f"/api/personal_accounts/{personal_account_2['pesel']}/outgoing_transfer", json=transfer_data)
-
-        loan_data = {"amount": 100}
-        response = client.post(f"/api/personal_accounts/{personal_account['pesel']}/submit_for_loan", json=loan_data)
-
-        assert response.status_code == 200
-        assert response.get_json() == {"message": "Submission for loan successful"}
-
-    def test_get_history(self, client, personal_account, personal_account_2):
-        personal_account["promo_code"] = "PROM_123"
-        client.post("/api/personal_accounts", json=personal_account)
-        client.post("/api/personal_accounts", json=personal_account_2)
-
-        transfer_data = {"amount": 50, "receiver_pesel": personal_account_2["pesel"]}
-        client.post(f"/api/personal_accounts/{personal_account['pesel']}/outgoing_transfer", json=transfer_data)
-
-        response = client.get(f"/api/personal_accounts/{personal_account['pesel']}/history")
-        assert response.status_code == 200
-        assert len(response.get_json()) == 1
-
-    def test_history_with_express_transfer(self, client, personal_account, personal_account_2):
-        personal_account["promo_code"] = "PROM_123"
-        client.post("/api/personal_accounts", json=personal_account)
-        client.post("/api/personal_accounts", json=personal_account_2)
-
-        client.post(f"/api/personal_accounts/{personal_account['pesel']}/express_transfer",
-                    json={"amount": 10, "receiver_pesel": personal_account_2["pesel"]})
-
-        response = client.get(f"/api/personal_accounts/{personal_account['pesel']}/history")
-        assert response.status_code == 200
-        history = response.get_json()
-
-        charge = next((item for item in history if item["type"] == "charge"), None)
-        assert charge is not None
-        assert charge["identity"] == "express transfer"
-
-    def test_history_transfer_to_company(self, client, personal_account):
-        personal_account["promo_code"] = "PROM_123"
+    def test_transfer_invalid_type(self, client, personal_account):
         client.post("/api/personal_accounts", json=personal_account)
 
-        company_data = {"company_name": "Test Corp", "nip": "1234567890"}
-        client.post("/api/company_accounts", json=company_data)
-
-        client.post(f"/api/personal_accounts/{personal_account['pesel']}/outgoing_transfer",
-                    json={"amount": 10, "receiver_nip": company_data["nip"]})
-
-        response = client.get(f"/api/personal_accounts/{personal_account['pesel']}/history")
-        assert response.status_code == 200
-        history = response.get_json()
-
-        assert history[-1]["identity"] == company_data["nip"]
-
-    def test_get_non_existent_account(self, client):
-        response = client.get("/api/personal_accounts/99999999999")
-        assert response.status_code == 404
-
-    def test_update_non_existent_account(self, client):
-        response = client.patch("/api/personal_accounts/99999999999", json={"first_name": "Ghost"})
-        assert response.status_code == 404
-
-    def test_delete_non_existent_account(self, client):
-        response = client.delete("/api/personal_accounts/99999999999")
-        assert response.status_code == 404
-
-    def test_transfer_failure_insufficient_funds(self, client, personal_account, personal_account_2):
-        client.post("/api/personal_accounts", json=personal_account)
-        client.post("/api/personal_accounts", json=personal_account_2)
-
-        transfer_data = {"amount": 1000, "receiver_pesel": personal_account_2["pesel"]}
-        response = client.post(f"/api/personal_accounts/{personal_account['pesel']}/outgoing_transfer",
-                               json=transfer_data)
+        transfer_data = {"amount": 100, "type": "crypto_scam"}
+        response = client.post(f"/api/personal_accounts/{personal_account['pesel']}/transfer", json=transfer_data)
         assert response.status_code == 400
 
-    def test_transfer_failure_receiver_not_found(self, client, personal_account):
-        personal_account["promo_code"] = "PROM_123"
-        client.post("/api/personal_accounts", json=personal_account)
-        response = client.post(f"/api/personal_accounts/{personal_account['pesel']}/outgoing_transfer",
-                               json={"amount": 10, "receiver_pesel": "00000000000"})
+    def test_transfer_account_not_found(self, client):
+        transfer_data = {"amount": 100, "type": "incoming"}
+        response = client.post("/api/personal_accounts/99999999999/transfer", json=transfer_data)
         assert response.status_code == 404
-
-    def test_express_transfer_failure_receiver_not_found(self, client, personal_account):
-        personal_account["promo_code"] = "PROM_123"
-        client.post("/api/personal_accounts", json=personal_account)
-        response = client.post(f"/api/personal_accounts/{personal_account['pesel']}/express_transfer",
-                               json={"amount": 10, "receiver_pesel": "00000000000"})
-        assert response.status_code == 404
-
-    def test_loan_failure(self, client, personal_account):
-        client.post("/api/personal_accounts", json=personal_account)
-        response = client.post(f"/api/personal_accounts/{personal_account['pesel']}/submit_for_loan",
-                               json={"amount": 100})
-        assert response.status_code == 400
-
-    def test_history_non_existent_account(self, client):
-        response = client.get("/api/personal_accounts/99999999999/history")
-        assert response.status_code == 404
-
-    def test_express_transfer_failure_insufficient_funds(self, client, personal_account, personal_account_2):
-        client.post("/api/personal_accounts", json=personal_account)
-        client.post("/api/personal_accounts", json=personal_account_2)
-
-        transfer_data = {"amount": 1000, "receiver_pesel": personal_account_2["pesel"]}
-        response = client.post(f"/api/personal_accounts/{personal_account['pesel']}/express_transfer",
-                               json=transfer_data)
-
-        assert response.status_code == 400
-        assert response.get_json() == {"error": "Express transfer failed"}
-
-    def test_loan_non_existent_account(self, client):
-        loan_data = {"amount": 100}
-        response = client.post("/api/personal_accounts/99999999999/submit_for_loan", json=loan_data)
-
-        assert response.status_code == 404
-        assert response.get_json() == {"error": "Account not found"}

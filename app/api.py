@@ -6,9 +6,6 @@ from src.company_account import CompanyAccount
 app = Flask(__name__)
 account_registry = AccountRegistry()
 
-
-# ========= Personal Account Endpoints ==========
-
 @app.route("/api/personal_accounts", methods=['POST'])
 def create_personal_account():
     data = request.get_json()
@@ -70,36 +67,47 @@ def delete_personal_account(pesel):
     return jsonify({"message": "Account deleted"}), 200
 
 
-@app.route("/api/personal_accounts/<pesel>/outgoing_transfer", methods=['POST'])
-def personal_account_outgoing_transfer(pesel):
+@app.route("/api/personal_accounts/<pesel>/transfer", methods=['POST'])
+def transfer_personal_account(pesel):
     data = request.get_json()
-    sender = account_registry.search_personal_account(pesel)
+    account = account_registry.search_personal_account(pesel)
+
+    if not account:
+        return jsonify({"error": "Account not found"}), 404
+
+    transfer_type = data.get("type")
     amount = data.get("amount")
-    receiver = find_receiver(data)
 
-    if not sender or not receiver:
-        return jsonify({"error": "Sender or receiver account not found"}), 404
+    if transfer_type == "incoming":
+        if amount <= 0:
+            return jsonify({"error": "Invalid amount"}), 422
+        account.balance += amount
+        return jsonify({"message": "Transfer in progress"}), 200
 
-    success = sender.outgoing_transfer(receiver, amount)
-    if success:
-        return jsonify({"message": "Outgoing transfer successful"}), 200
-    return jsonify({"error": "Outgoing transfer failed"}), 400
+    elif transfer_type == "outgoing":
+        receiver = find_receiver(data)
+        if not receiver:
+            return jsonify({"error": "Receiver account not found"}), 404  # lub 422
 
+        success = account.outgoing_transfer(receiver, amount)
+        if success:
+            return jsonify({"message": "Transfer in progress"}), 200
+        else:
+            return jsonify({"error": "Insufficient funds"}), 422
 
-@app.route("/api/personal_accounts/<pesel>/express_transfer", methods=['POST'])
-def personal_account_express_transfer(pesel):
-    data = request.get_json()
-    sender = account_registry.search_personal_account(pesel)
-    amount = data.get("amount")
-    receiver = find_receiver(data)
+    elif transfer_type == "express":
+        receiver = find_receiver(data)
+        if not receiver:
+            return jsonify({"error": "Receiver account not found"}), 404
 
-    if not sender or not receiver:
-        return jsonify({"error": "Sender or receiver account not found"}), 404
-    success = sender.express_transfer(receiver, amount)
-    if success:
-        return jsonify({"message": "Express transfer successful"}), 200
-    return jsonify({"error": "Express transfer failed"}), 400
+        success = account.express_transfer(receiver, amount)
+        if success:
+            return jsonify({"message": "Transfer in progress"}), 200
+        else:
+            return jsonify({"error": "Insufficient funds"}), 422
 
+    else:
+        return jsonify({"error": "Unknown transfer type"}), 400
 
 @app.route("/api/personal_accounts/<pesel>/submit_for_loan", methods=['POST'])
 def personal_account_submit_for_loan(pesel):
@@ -138,9 +146,6 @@ def get_personal_history(pesel):
         serialized_history.append(data_copy)
 
     return jsonify(serialized_history), 200
-
-
-# ========== Company Account Endpoints ==========
 
 @app.route("/api/company_accounts", methods=['POST'])
 def create_company_account():
@@ -197,34 +202,47 @@ def delete_company_account(nip):
     return jsonify({"message": "Account deleted"}), 200
 
 
-@app.route("/api/company_accounts/<nip>/express_transfer", methods=['POST'])
-def company_account_express_transfer(nip):
+@app.route("/api/company_accounts/<nip>/transfer", methods=['POST'])
+def transfer_company_account(nip):
     data = request.get_json()
+    account = account_registry.search_company_account(nip)
+
+    if not account:
+        return jsonify({"error": "Account not found"}), 404
+
+    transfer_type = data.get("type")
     amount = data.get("amount")
-    sender = account_registry.search_company_account(nip)
-    receiver = find_receiver(data)
 
-    if not sender or not receiver:
-        return jsonify({"error": "Sender or receiver account not found"}), 404
-    success = sender.express_transfer(receiver, amount)
-    if success:
-        return jsonify({"message": "Express transfer successful"}), 200
-    return jsonify({"error": "Express transfer failed"}), 400
+    if transfer_type == "incoming":
+        if amount <= 0:
+            return jsonify({"error": "Invalid amount"}), 422
+        account.balance += amount
+        return jsonify({"message": "Transfer in progress"}), 200
 
+    elif transfer_type == "outgoing":
+        receiver = find_receiver(data)
+        if not receiver:
+            return jsonify({"error": "Receiver account not found"}), 404
 
-@app.route("/api/company_accounts/<nip>/outgoing_transfer", methods=['POST'])
-def company_account_outgoing_transfer(nip):
-    data = request.get_json()
-    amount = data.get("amount")
-    sender = account_registry.search_company_account(nip)
-    receiver = find_receiver(data)
+        success = account.outgoing_transfer(receiver, amount)
+        if success:
+            return jsonify({"message": "Transfer in progress"}), 200
+        else:
+            return jsonify({"error": "Insufficient funds"}), 422
 
-    if not sender or not receiver:
-        return jsonify({"error": "Sender or receiver account not found"}), 404
-    success = sender.outgoing_transfer(receiver, amount)
-    if success:
-        return jsonify({"message": "Outgoing transfer successful"}), 200
-    return jsonify({"error": "Outgoing transfer failed"}), 400
+    elif transfer_type == "express":
+        receiver = find_receiver(data)
+        if not receiver:
+            return jsonify({"error": "Receiver account not found"}), 404
+
+        success = account.express_transfer(receiver, amount)
+        if success:
+            return jsonify({"message": "Transfer in progress"}), 200
+        else:
+            return jsonify({"error": "Insufficient funds"}), 422
+
+    else:
+        return jsonify({"error": "Unknown transfer type"}), 400
 
 
 @app.route("/api/company_accounts/<nip>/submit_for_loan", methods=['POST'])
@@ -264,9 +282,6 @@ def get_company_history(nip):
         history.append(data_copy)
 
     return jsonify(history), 200
-
-
-# ========== Helper functions ==========
 
 def find_receiver(data):
     receiver_pesel = data.get("receiver_pesel")

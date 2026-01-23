@@ -1,3 +1,4 @@
+import os
 import requests
 from datetime import datetime
 from src.base_account import BaseAccount
@@ -10,6 +11,8 @@ class CompanyAccount(BaseAccount):
         self.company_name = company_name
         if len(nip) != 10:
             nip = "invalid"
+        if not self.validate_nip(nip):
+            raise ValueError("Company not registered!!")
         self.nip = nip
 
     def express_transfer(self, receiver, amount):
@@ -41,15 +44,26 @@ class CompanyAccount(BaseAccount):
 
     @staticmethod
     def validate_nip(nip):
+        mf_url = os.environ.get("BANK_APP_MF_URL", "https://wl-test.mf.gov.pl/")
         date = datetime.now().strftime("%Y-%m-%d")
+
+        url = f"{mf_url}api/search/nip/{nip}?date={date}"
+
         try:
-            response = requests.get(f"https://wl-api.mf.gov.pl/api/search/nip/{nip}?date={date}")
+            response = requests.get(url, timeout=10)
+            print(f"MF API response: {response.text}")
             if response.status_code == 200:
                 data = response.json()
-                status = data["result"]["subject"]["statusVat"]
-                if status == "Czynny":
-                    return True
+
+                result = data.get("result", {})
+                subject = result.get("subject")
+
+                if subject:
+                    return subject.get("statusVat") == "Czynny"
+                else:
+                    return False
             return False
-        except:
-            raise ValueError("Company not registered!!")
+        except requests.exceptions.RequestException as e:
+            print(f"Error connecting to MF API: {e}")
+            return False
 

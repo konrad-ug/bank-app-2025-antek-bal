@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="Python 3.12 (bank-app-2025-antek-bal)" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="3.10 WSL (Ubuntu): (/home/sturm84/.virtualenvs/bank-app-2025-antek-bal/bin/python)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="3.12 WSL (Ubuntu): (/home/abal/.virtualenvs/bank-app-2025-antek-bal/bin/python)" project-jdk-type="Python SDK" />
 </project>

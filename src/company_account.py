@@ -1,3 +1,5 @@
+import requests
+from datetime import datetime
 from src.base_account import BaseAccount
 
 
@@ -36,3 +38,18 @@ class CompanyAccount(BaseAccount):
             self.add_to_history(amount, "sender", "official bank")
             return True
         return False
+
+    @staticmethod
+    def validate_nip(nip):
+        date = datetime.now().strftime("%Y-%m-%d")
+        try:
+            response = requests.get(f"https://wl-api.mf.gov.pl/api/search/nip/{nip}?date={date}")
+            if response.status_code == 200:
+                data = response.json()
+                status = data["result"]["subject"]["statusVat"]
+                if status == "Czynny":
+                    return True
+            return False
+        except:
+            raise ValueError("Company not registered!!")
+

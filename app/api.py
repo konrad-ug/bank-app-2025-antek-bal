@@ -161,6 +161,8 @@ def create_company_account():
     if account_registry.search_company_account(nip):
         return jsonify({"message": "Account with this NIP already exists"}), 409
 
+    
+
     account = CompanyAccount(data.get("company_name"), nip)
     account_registry.add_company_account(account)
     return jsonify({"message": "Account created"}), 201

@@ -10,10 +10,12 @@ class CompanyAccount(BaseAccount):
 
         self.company_name = company_name
         if len(nip) != 10:
-            nip = "invalid"
-        if not self.validate_nip(nip):
-            raise ValueError("Company not registered!!")
-        self.nip = nip
+            self.nip = "invalid"
+        else:
+            if self.validate_nip(nip):
+                self.nip = nip
+            else:
+                raise ValueError("Company not registered!!")
 
     def express_transfer(self, receiver, amount):
         if amount > self.balance or amount <= 0:

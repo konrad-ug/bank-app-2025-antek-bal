@@ -161,9 +161,12 @@ def create_company_account():
     if account_registry.search_company_account(nip):
         return jsonify({"message": "Account with this NIP already exists"}), 409
 
-    account = CompanyAccount(data.get("company_name"), nip)
-    account_registry.add_company_account(account)
-    return jsonify({"message": "Account created"}), 201
+    try:
+        account = CompanyAccount(data.get("company_name"), nip)
+        account_registry.add_company_account(account)
+        return jsonify({"message": "Account created"}), 201
+    except ValueError as e:
+        return jsonify({"message": str(e)}), 400
 
 @app.route("/api/company_accounts", methods=['GET'])
 def get_all_company_accounts():

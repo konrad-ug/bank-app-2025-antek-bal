@@ -42,9 +42,9 @@ class PersonalAccount(BaseAccount):
     def send_history_via_email(self, email):
         date = datetime.now().strftime("%Y-%m-%d")
         subject = f"Account Transfer History {date}"
-        text = f"Personal account history: {[item.amount for item in self.history]}"
+        text = f"Personal account history: {[item['amount'] for item in self.history]}"
 
-        SMTPClient().send(subject, text, email)
+        return SMTPClient.send(subject, text, email)
 
     @staticmethod
     def is_born_after_60(pesel):

@@ -1,4 +1,6 @@
 from src.base_account import BaseAccount
+from src.smtp.smtp import SMTPClient
+from datetime import datetime
 
 
 class PersonalAccount(BaseAccount):
@@ -36,6 +38,13 @@ class PersonalAccount(BaseAccount):
             return True
 
         return False
+
+    def send_history_via_email(self, email):
+        date = datetime.now().strftime("%Y-%m-%d")
+        subject = f"Account Transfer History {date}"
+        text = f"Personal account history: {[item['amount'] for item in self.history]}"
+
+        return SMTPClient.send(subject, text, email)
 
     @staticmethod
     def is_born_after_60(pesel):

@@ -2,6 +2,7 @@ import os
 import requests
 from datetime import datetime
 from src.base_account import BaseAccount
+from src.smtp.smtp import SMTPClient
 
 
 class CompanyAccount(BaseAccount):
@@ -43,6 +44,13 @@ class CompanyAccount(BaseAccount):
             self.add_to_history(amount, "sender", "official bank")
             return True
         return False
+
+    def send_history_via_email(self, email):
+        date = datetime.now().strftime("%Y-%m-%d")
+        subject = f"Account Transfer History {date}"
+        text = f"Company account history: {[item['amount'] for item in self.history]}"
+
+        return SMTPClient.send(subject, text, email)
 
     @staticmethod
     def validate_nip(nip):

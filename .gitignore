@@ -3,7 +3,7 @@ __pycache__/
 .pytest_cache/
 
 #PyCharm
-.idea
+.idea/
 
 #Enviroment
 .env

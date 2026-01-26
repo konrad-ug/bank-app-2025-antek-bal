@@ -1,10 +1,12 @@
 import pytest
 from app.api import app, account_registry
 
+
 @pytest.fixture
 def client():
     with app.test_client() as client:
         yield client
+
 
 @pytest.fixture(autouse=True)
 def clean_registry():

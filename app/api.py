@@ -6,6 +6,7 @@ from src.company_account import CompanyAccount
 app = Flask(__name__)
 account_registry = AccountRegistry()
 
+
 @app.route("/api/personal_accounts", methods=['POST'])
 def create_personal_account():
     data = request.get_json()
@@ -114,6 +115,7 @@ def transfer_personal_account(pesel):
     else:
         return jsonify({"error": "Unknown transfer type"}), 400
 
+
 @app.route("/api/personal_accounts/<pesel>/submit_for_loan", methods=['POST'])
 def personal_account_submit_for_loan(pesel):
     submitter = account_registry.search_personal_account(pesel)
@@ -152,6 +154,7 @@ def get_personal_history(pesel):
 
     return jsonify(serialized_history), 200
 
+
 @app.route("/api/company_accounts", methods=['POST'])
 def create_company_account():
     data = request.get_json()
@@ -167,6 +170,7 @@ def create_company_account():
         return jsonify({"message": "Account created"}), 201
     except ValueError as e:
         return jsonify({"message": str(e)}), 400
+
 
 @app.route("/api/company_accounts", methods=['GET'])
 def get_all_company_accounts():
@@ -294,6 +298,7 @@ def get_company_history(nip):
         history.append(data_copy)
 
     return jsonify(history), 200
+
 
 def find_receiver(data):
     receiver_pesel = data.get("receiver_pesel")

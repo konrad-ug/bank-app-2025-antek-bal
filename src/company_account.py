@@ -76,4 +76,3 @@ class CompanyAccount(BaseAccount):
         except requests.exceptions.RequestException as e:
             print(f"Error connecting to MF API: {e}")
             return False
-

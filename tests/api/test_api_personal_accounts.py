@@ -56,7 +56,6 @@ class TestPersonalAccountsApi:
         get_response = client.get(f"/api/personal_accounts/{personal_account['pesel']}")
         assert get_response.status_code == 404
 
-
     def test_transfer_incoming(self, client, personal_account):
         client.post("/api/personal_accounts", json=personal_account)
         transfer_data = {"amount": 500, "type": "incoming"}

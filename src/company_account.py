@@ -52,6 +52,9 @@ class CompanyAccount(BaseAccount):
 
         return SMTPClient.send(subject, text, email)
 
+    def to_dict(self):
+        return self.__dict__
+
     @staticmethod
     def validate_nip(nip):
         mf_url = os.environ.get("BANK_APP_MF_URL", "https://wl-test.mf.gov.pl/")

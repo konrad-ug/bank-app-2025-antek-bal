@@ -32,3 +32,7 @@ class AccountRegistry:
 
     def quantity_company_accounts(self):
         return len(self.company_accounts)
+
+    def clear(self):
+        self.personal_accounts = []
+        self.company_accounts = []

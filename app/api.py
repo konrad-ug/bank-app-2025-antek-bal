@@ -2,10 +2,11 @@ from flask import Flask, request, jsonify
 from src.account_registry import AccountRegistry
 from src.personal_account import PersonalAccount
 from src.company_account import CompanyAccount
+from src.mongo_accounts_repository import MongoAccountsRepository
 
 app = Flask(__name__)
 account_registry = AccountRegistry()
-
+account_repository = MongoAccountsRepository()
 
 @app.route("/api/personal_accounts", methods=['POST'])
 def create_personal_account():
@@ -115,7 +116,6 @@ def transfer_personal_account(pesel):
     else:
         return jsonify({"error": "Unknown transfer type"}), 400
 
-
 @app.route("/api/personal_accounts/<pesel>/submit_for_loan", methods=['POST'])
 def personal_account_submit_for_loan(pesel):
     submitter = account_registry.search_personal_account(pesel)
@@ -154,7 +154,6 @@ def get_personal_history(pesel):
 
     return jsonify(serialized_history), 200
 
-
 @app.route("/api/company_accounts", methods=['POST'])
 def create_company_account():
     data = request.get_json()
@@ -170,7 +169,6 @@ def create_company_account():
         return jsonify({"message": "Account created"}), 201
     except ValueError as e:
         return jsonify({"message": str(e)}), 400
-
 
 @app.route("/api/company_accounts", methods=['GET'])
 def get_all_company_accounts():
@@ -299,6 +297,26 @@ def get_company_history(nip):
 
     return jsonify(history), 200
 
+
+@app.route("/api/accounts/save", methods=['POST'])
+def save_accounts():
+    accounts = account_registry.return_personal_accounts()
+
+    account_repository.save_all(accounts)
+
+    return jsonify({"message": "Accounts saved successfully"}), 201
+
+
+@app.route("/api/accounts/load", methods=['POST'])
+def load_accounts():
+    account_registry.clear()
+
+    loaded_accounts = account_repository.load_all()
+
+    for account in loaded_accounts:
+        account_registry.add_personal_account(account)
+
+    return jsonify({"message": "Accounts loaded successfully", "count": len(loaded_accounts)}), 200
 
 def find_receiver(data):
     receiver_pesel = data.get("receiver_pesel")

@@ -46,6 +46,9 @@ class PersonalAccount(BaseAccount):
 
         return SMTPClient.send(subject, text, email)
 
+    def to_dict(self):
+        return self.__dict__
+
     @staticmethod
     def is_born_after_60(pesel):
         if pesel == "invalid":

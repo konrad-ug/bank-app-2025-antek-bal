@@ -1,6 +1,7 @@
 import pytest, time
 from app.api import app
 
+
 class TestPerformance:
     @pytest.fixture
     def client(self):
@@ -51,5 +52,3 @@ class TestPerformance:
 
         balance = response_get.get_json()["balance"]
         assert balance == 100 * transfer['amount']
-
-
